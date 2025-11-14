@@ -7,6 +7,7 @@ use App\UserRole;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Enum;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -20,20 +21,22 @@ class UserController extends Controller
     public function store(Request $request)
     {
         try {
-            $data = [
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
-                'role' => $request->role
-            ];
+            $validated = $request->validate([
+                'name' => 'required|min:3',
+                'email' => 'required|email',
+                'password' => 'required|min:4',
+                'role' => Rule::enum(UserRole::class)
+            ]);
 
-            $userByEmail = User::where('email', $data['email'])->first();
+            $validated['password'] = Hash::make($validated['password']);
+
+            $userByEmail = User::where('email', $validated['email'])->first();
 
             if ($userByEmail) {
-                throw new \Exception($data['email'] . ' already used');
+                throw new \Exception($validated['email'] . ' already used');
             }
     
-            $result = User::create($data);
+            $result = User::create($validated);
     
             return $this->responseSuccess($result, 201);
         } catch (\Exception $error) {

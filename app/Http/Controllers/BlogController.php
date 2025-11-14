@@ -79,7 +79,6 @@ class BlogController extends Controller
                 'content' => 'min: 1'
             ]);
 
-
             $blog = Blog::findOrFail($id);
 
             $this->checkBlogAuthorization($request->user(), $blog);
@@ -101,7 +100,7 @@ class BlogController extends Controller
             $this->checkBlogAuthorization($request->user(), $blog);
     
             $blog->delete();
-    
+            
             return $this->responseSuccess(['message' => 'Blog '. $id .' deleted']);
         } catch (\Exception $error) {
             return $this->responseError($error);
