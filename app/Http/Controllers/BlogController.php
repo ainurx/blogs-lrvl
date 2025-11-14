@@ -2,66 +2,96 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\UserRole;
 use App\Models\Blog;
+use Illuminate\Http\Request;
 
 class BlogController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        $data = [
-            'id' => 1,
-            'title' => 'Harry Potter'
-        ];
+        $data = null;
+
+        if ($request->user()->role === UserRole::Normal) {
+            $data = Blog::where('user_id', $request->user()->id);
+        } else {
+            $data = Blog::all();
+        }
 
         return $this->responseSuccess($data);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         try {
             $validated = $request->validate([
                 'title' => 'required|min:3|max:75',
-                'content' => 'required'
+                'content' => 'required',
             ]);
-    
+
+            $validated['user_id'] = $request->user()->id;
+            $validated['last_update_by_user_id'] = $request->user()->id;
+
             $result = Blog::create($validated);
     
             return $this->responseSuccess($result, 201);
         } catch (\Exception $error) {
-            return response()->json([
-                'error' => $error->getMessage()
-            ], 400);
+            return $this->responseError($error);
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
-        //
+        try {
+            $blog = Blog::findOrFail($id);
+
+            if ($request->user()->id !=  $blog->user_id || in_array($request->user()->role, [UserRole::Manager, UserRole::Admin]) ) {
+                abort(403, 'Oops, not authorized');
+            }
+
+            return $this->responseSuccess($blog);
+        } catch (\Exception $error) {
+            $this->responseError($error);
+        }
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, string $id)
     {
-        //
+        try {
+            $validated = $request->validate([
+                'title' => 'min:3',
+                'content' => 'min: 1'
+            ]);
+
+
+            $blog = Blog::findOrFail($id);
+
+            if ($request->user()->id !=  $blog->user_id || in_array($request->user()->role, [UserRole::Manager, UserRole::Admin]) ) {
+                abort(403, 'Oops, not authorized');
+            }
+
+            $blog->update($validated);
+
+            return $this->responseSuccess($blog);
+        } catch (\Exception $error) {
+            return $this->responseError($error);
+        }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
+    public function destroy(Request $request, string $id)
     {
-        //
+        try {
+            $blog = Blog::findOrFail($id);
+            
+            if ($request->user()->id !=  $blog->user_id || in_array($request->user()->role, [UserRole::Manager, UserRole::Admin]) ) {
+                abort(403, 'Oops, not authorized');
+            }
+    
+            $blog->delete();
+    
+            return $this->responseSuccess(['message' => 'Blog '. $id .' deleted']);
+        } catch (\Exception $error) {
+            return $this->responseError($error);
+        }
     }
 }

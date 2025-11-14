@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('title', length: 75);
             $table->text('content');
-            $table->foreignId('user_id')->constrained();
-            $table->foreignId('last_update_by_user_id')->constrained('users');
+            $table->foreignId('user_id')->constrained()->nullOnDelete();
+            $table->foreignId('last_update_by_user_id')->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
     }

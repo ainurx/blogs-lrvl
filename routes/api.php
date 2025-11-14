@@ -1,8 +1,15 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\BlogController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserController;
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+Route::middleware(['auth:sanctum'])->group(function() {
+    Route::apiResource('blogs', BlogController::class)->middleware(['abilities:blog']);
+    Route::apiResource('users', UserController::class)->middleware(['abilities:user']);
+
+    Route::post('/signout', [AuthController::class, 'signout']);
+});
+
+Route::post('/signin', [AuthController::class, 'signin']);

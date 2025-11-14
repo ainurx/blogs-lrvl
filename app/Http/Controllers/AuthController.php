@@ -2,42 +2,45 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use App\Models\User;
 use App\UserRole;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
     public function signin(Request $request) {
         try {
-            $email = $request->email;
-            $password = $request->password;
-    
-            $userByEmail = User::where('email', $email)->first();
+            $credential = $request->validate([
+                'email' => 'required',
+                'password' => 'required'
+            ]);
 
-            if (!$userByEmail || !Hash::check($password, $userByEmail->password)) {
+            if (!Auth::attempt($credential)) {
                 throw new \Exception('Invalid credential');
             }
 
-            return $this->responseSuccess($userByEmail);
+            $user = User::where('email', $request->email)->first();
+
+            $abilities = array('blog');
+
+            if ($user->role === UserRole::Admin) {
+                $abilities[0] = '*';
+            }
+
+            $token = $user->createToken($user->role.'-token', $abilities)->plainTextToken;
+
+            return $this->responseSuccess([
+                'token' => $token
+            ]);
         } catch (\Exception $error) {
-            return response()->json([
-                'error' => $error->getMessage()
-            ], 400);
+            return $this->responseError($error);
         }
     }
 
-    public function signup(Request $request) {
-        $data = [
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => $request->role
-        ];
+    public function signout(Request $request) {
+        $request->user()->currentAccessToken()->delete();
 
-        $result = User::create($data);
-
-        return $this->responseSuccess($result, 201);
+        return $this->responseSuccess([ 'message' => 'Logout successful']);
     }
 }
