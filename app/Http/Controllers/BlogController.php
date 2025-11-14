@@ -14,9 +14,15 @@ class BlogController extends Controller
         $data = null;
 
         if ($request->user()->role === UserRole::Normal->value) {
-            $data = Blog::where('user_id', $request->user()->id);
+            $data = Blog::select('blogs.*', 'author.name as author', 'editor.name as editor')
+                ->leftJoin('users as author', 'author.id', '=', 'blogs.user_id')
+                ->leftJoin('users as editor', 'editor.id', '=', 'blogs.last_update_by_user_id')
+                ->where('user_id', $request->user()->id)
+                ->get();
         } else {
-            $data = Blog::all();
+            $data = Blog::select('blogs.*', 'author.name as author', 'editor.name as editor')
+                ->leftJoin('users as author', 'author.id', '=', 'blogs.user_id')
+                ->leftJoin('users as editor', 'editor.id', '=', 'blogs.last_update_by_user_id')->get();
         }
 
         return $this->responseSuccess($data);
@@ -25,7 +31,7 @@ class BlogController extends Controller
     public function checkBlogAuthorization(User $user, Blog $blog):void
     {
         if ($user->id !=  $blog->user_id && !in_array($user->role, [UserRole::Manager->value, UserRole::Admin->value])) {
-            abort(403, 'Oops, not authorized');
+            abort(403, 'Unauthorized');
         }
     }
 
@@ -51,7 +57,11 @@ class BlogController extends Controller
     public function show(Request $request, string $id)
     {
         try {
-            $blog = Blog::findOrFail($id);
+            $blog = Blog::select('blogs.*', 'author.name as author', 'editor.name as editor')
+                ->leftJoin('users as author', 'author.id', '=', 'blogs.user_id')
+                ->leftJoin('users as editor', 'editor.id', '=', 'blogs.last_update_by_user_id')
+                ->where('blogs.id', $id)
+                ->firstOrFail();
 
             $this->checkBlogAuthorization($request->user(), $blog);
 
