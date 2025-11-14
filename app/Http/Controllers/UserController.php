@@ -26,6 +26,12 @@ class UserController extends Controller
                 'password' => Hash::make($request->password),
                 'role' => $request->role
             ];
+
+            $userByEmail = User::where('email', $data['email'])->first();
+
+            if ($userByEmail) {
+                throw new \Exception($data['email'] . ' already used');
+            }
     
             $result = User::create($data);
     

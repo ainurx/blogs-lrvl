@@ -24,7 +24,7 @@ class AuthController extends Controller
 
             $abilities = array('blog');
 
-            if ($user->role === UserRole::Admin) {
+            if ($user->role === UserRole::Admin->value) {
                 $abilities[0] = '*';
             }
 

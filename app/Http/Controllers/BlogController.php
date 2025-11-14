@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\UserRole;
 use App\Models\Blog;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class BlogController extends Controller
@@ -12,13 +13,20 @@ class BlogController extends Controller
     {
         $data = null;
 
-        if ($request->user()->role === UserRole::Normal) {
+        if ($request->user()->role === UserRole::Normal->value) {
             $data = Blog::where('user_id', $request->user()->id);
         } else {
             $data = Blog::all();
         }
 
         return $this->responseSuccess($data);
+    }
+
+    public function checkBlogAuthorization(User $user, Blog $blog):void
+    {
+        if ($user->id !=  $blog->user_id && !in_array($user->role, [UserRole::Manager->value, UserRole::Admin->value])) {
+            abort(403, 'Oops, not authorized');
+        }
     }
 
     public function store(Request $request)
@@ -45,13 +53,11 @@ class BlogController extends Controller
         try {
             $blog = Blog::findOrFail($id);
 
-            if ($request->user()->id !=  $blog->user_id || in_array($request->user()->role, [UserRole::Manager, UserRole::Admin]) ) {
-                abort(403, 'Oops, not authorized');
-            }
+            $this->checkBlogAuthorization($request->user(), $blog);
 
             return $this->responseSuccess($blog);
         } catch (\Exception $error) {
-            $this->responseError($error);
+            return $this->responseError($error);
         }
     }
 
@@ -66,10 +72,9 @@ class BlogController extends Controller
 
             $blog = Blog::findOrFail($id);
 
-            if ($request->user()->id !=  $blog->user_id || in_array($request->user()->role, [UserRole::Manager, UserRole::Admin]) ) {
-                abort(403, 'Oops, not authorized');
-            }
+            $this->checkBlogAuthorization($request->user(), $blog);
 
+            $validated['last_update_by_user_id'] = $request->user()->id;
             $blog->update($validated);
 
             return $this->responseSuccess($blog);
@@ -83,9 +88,7 @@ class BlogController extends Controller
         try {
             $blog = Blog::findOrFail($id);
             
-            if ($request->user()->id !=  $blog->user_id || in_array($request->user()->role, [UserRole::Manager, UserRole::Admin]) ) {
-                abort(403, 'Oops, not authorized');
-            }
+            $this->checkBlogAuthorization($request->user(), $blog);
     
             $blog->delete();
     

@@ -10,7 +10,7 @@ abstract class Controller
 
     protected function responseError($error = null, $status = 400) {
         return response()->json([
-            'error' => $error->getMessage()
+            'message' => $error->getMessage()
         ], $status);
     }
 }
