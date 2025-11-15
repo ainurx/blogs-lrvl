@@ -60,7 +60,7 @@ class UserController extends Controller
         try {
             $validated = $request->validate([
                 'name' => 'min:3',
-                'password' => 'min: 4',
+                'password' => 'min:4',
                 'role' => [new Enum(UserRole::class)]
             ]);
 

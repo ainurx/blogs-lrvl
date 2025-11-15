@@ -76,7 +76,7 @@ class BlogController extends Controller
         try {
             $validated = $request->validate([
                 'title' => 'min:3',
-                'content' => 'min: 1'
+                'content' => 'min:1'
             ]);
 
             $blog = Blog::findOrFail($id);

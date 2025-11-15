@@ -1,5 +1,8 @@
 Please run the following command for app configuration & running it in local environment
 
+### ENV setup
+create .env file and copy paste key value from .env.example to it
+
 ### Create database
 create MySQL database with name **blogs_lrvl**
 
