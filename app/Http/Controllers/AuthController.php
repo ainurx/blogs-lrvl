@@ -3,12 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\UserRole;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Repositories\User\UserInterface;
 
 class AuthController extends Controller
 {
+    protected UserInterface $user;
+    
+    public function __construct(UserInterface $user)
+    {
+        $this->user = $user;
+    }
+
     public function signin(Request $request) {
         try {
             $credential = $request->validate([
@@ -20,7 +27,11 @@ class AuthController extends Controller
                 throw new \Exception('Invalid credential');
             }
 
-            $user = User::where('email', $request->email)->first();
+            $params = [
+                'email' => $request->email
+            ];
+
+            $user = $this->user->findOneByParams($params);
 
             $abilities = array('blog');
 

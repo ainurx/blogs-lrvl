@@ -6,23 +6,29 @@ use App\UserRole;
 use App\Models\Blog;
 use App\Models\User;
 use Illuminate\Http\Request;
+use App\Repositories\Blog\BlogInterface;
 
 class BlogController extends Controller
 {
+    protected BlogInterface $blog;
+
+    public function __construct(BlogInterface $blog) 
+    {
+        $this->blog = $blog;
+    }
+
     public function index(Request $request)
     {
         $data = null;
 
         if ($request->user()->role === UserRole::Normal->value) {
-            $data = Blog::select('blogs.*', 'author.name as author', 'editor.name as editor')
-                ->leftJoin('users as author', 'author.id', '=', 'blogs.user_id')
-                ->leftJoin('users as editor', 'editor.id', '=', 'blogs.last_update_by_user_id')
-                ->where('user_id', $request->user()->id)
-                ->get();
+            $params = [ 
+                'user_id' => $request->user()->id
+            ];
+
+            $data = $this->blog->findByParams($params);
         } else {
-            $data = Blog::select('blogs.*', 'author.name as author', 'editor.name as editor')
-                ->leftJoin('users as author', 'author.id', '=', 'blogs.user_id')
-                ->leftJoin('users as editor', 'editor.id', '=', 'blogs.last_update_by_user_id')->get();
+            $data = $this->blog->findAll();
         }
 
         return $this->responseSuccess($data);
@@ -46,7 +52,7 @@ class BlogController extends Controller
             $validated['user_id'] = $request->user()->id;
             $validated['last_update_by_user_id'] = $request->user()->id;
 
-            $result = Blog::create($validated);
+            $result = $this->blog->create($validated);
     
             return $this->responseSuccess($result, 201);
         } catch (\Exception $error) {
@@ -57,11 +63,10 @@ class BlogController extends Controller
     public function show(Request $request, string $id)
     {
         try {
-            $blog = Blog::select('blogs.*', 'author.name as author', 'editor.name as editor')
-                ->leftJoin('users as author', 'author.id', '=', 'blogs.user_id')
-                ->leftJoin('users as editor', 'editor.id', '=', 'blogs.last_update_by_user_id')
-                ->where('blogs.id', $id)
-                ->firstOrFail();
+            $params = [
+                'blogs.id' => $id
+            ];
+            $blog = $this->blog->findOneByParams($params);
 
             $this->checkBlogAuthorization($request->user(), $blog);
 
@@ -79,14 +84,15 @@ class BlogController extends Controller
                 'content' => 'min:1'
             ]);
 
-            $blog = Blog::findOrFail($id);
+            $blog = $this->blog->findById($id);
 
             $this->checkBlogAuthorization($request->user(), $blog);
 
             $validated['last_update_by_user_id'] = $request->user()->id;
-            $blog->update($validated);
+            
+            $result = $this->blog->update($id, $validated);
 
-            return $this->responseSuccess($blog);
+            return $this->responseSuccess($result);
         } catch (\Exception $error) {
             return $this->responseError($error);
         }
@@ -95,11 +101,11 @@ class BlogController extends Controller
     public function destroy(Request $request, string $id)
     {
         try {
-            $blog = Blog::findOrFail($id);
+            $blog = $this->blog->findById($id);
             
             $this->checkBlogAuthorization($request->user(), $blog);
     
-            $blog->delete();
+            $this->blog->delete($id);
             
             return $this->responseSuccess(['message' => 'Blog '. $id .' deleted']);
         } catch (\Exception $error) {

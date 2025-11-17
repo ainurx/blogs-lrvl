@@ -2,18 +2,25 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use App\UserRole;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Enum;
 use Illuminate\Validation\Rule;
+use App\Repositories\User\UserInterface;
 
 class UserController extends Controller
 {
+    protected UserInterface $user;
+    
+    public function __construct(UserInterface $user)
+    {
+        $this->user = $user;
+    }
+ 
     public function index()
     {
-        $users = User::all();
+        $users = $this->user->all();
 
         return $this->responseSuccess($users);
     }
@@ -30,13 +37,17 @@ class UserController extends Controller
 
             $validated['password'] = Hash::make($validated['password']);
 
-            $userByEmail = User::where('email', $validated['email'])->first();
+            $params = [
+                'email' => $validated['email']
+            ];
+            
+            $userByEmail = $this->user->findOneByParams($params);
 
             if ($userByEmail) {
                 throw new \Exception($validated['email'] . ' already used');
             }
     
-            $result = User::create($validated);
+            $result = $this->user->create($validated);
     
             return $this->responseSuccess($result, 201);
         } catch (\Exception $error) {
@@ -47,7 +58,7 @@ class UserController extends Controller
     public function show(string $id)
     {
         try {
-            $user = User::findOrFail($id);
+            $user = $this->user->findById($id);
 
             return $this->responseSuccess($user);
         } catch (\Exception $error) {
@@ -64,10 +75,9 @@ class UserController extends Controller
                 'role' => [new Enum(UserRole::class)]
             ]);
 
-            $user = User::findOrFail($id);
-            $user->update($validated);
+            $result = $this->user->update($id, $validated);
 
-            return $this->responseSuccess($user);
+            return $this->responseSuccess($result);
         } catch (\Exception $error) {
             return $this->responseError($error);
         }
@@ -76,9 +86,7 @@ class UserController extends Controller
     public function destroy(string $id)
     {
         try {
-            $user = User::findOrFail($id);
-
-            $user->delete();
+            $this->user->delete($id);
 
             return $this->responseSuccess([
                 'message' => 'user ' . $id . ' deleted'
